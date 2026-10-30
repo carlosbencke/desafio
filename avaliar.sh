@@ -156,12 +156,12 @@ echo "Desafio de Nivelamento — correção de $CAND ($(date '+%F %T'))"
 
 # ============================================================ PARTE 1 — LINUX
 secao linux-revisao "Linux · Revisão de código"
-revisao "$D/linux/revisao.txt" "3;5;7;9;2,10;11;12;13,14;15;18;16,17,20,22" "4 6 8 19 21"
+revisao "$D/linux/revisao.txt" "3;5;7;9;2,10;11;12;13,14;15;18;16,17,20,22" "1 4 6 8 19 21"
 
 secao linux-montagem "Linux · Montagem do servidor"
 check 1   "systemd ativo"                         '[[ $(systemctl is-system-running) =~ ^(running|degraded)$ ]]'
 check 1   "hostname nf-node-01"                   '[ "$(hostname)" = "$HOST" ]'
-check 1   "pacotes tree, lsof, htop e openssh-server" 'for p in tree lsof htop openssh-server; do dpkg -s $p | grep -q "Status: install ok installed" || exit 1; done'
+check 1   "pacotes tree, lsof, htop e openssh-server" 'for p in tree lsof htop openssh-server; do dpkg -s $p | grep -q "ok installed" || exit 1; done'
 check 1   "htop travado (hold)"                   'apt-mark showhold | grep -qx htop'
 check 1   "svc-importador é usuário de sistema sem login" '[ "$(id -u $SVC)" -lt 1000 ] && getent passwd $SVC | grep -Eq "(nologin|false)$"'
 check 1   "operador com home, bash e no grupo opsfiscal" 'getent passwd $OPER | grep -q "/bin/bash$" && [ -d /home/$OPER ] && id -nG $OPER | grep -qw $GRP'
@@ -201,7 +201,7 @@ relatorio "$D/linux/relatorio.md"
 
 # ============================================================ PARTE 2 — KUBERNETES
 secao k8s-revisao "Kubernetes · Revisão de manifesto"
-revisao "$D/k8s/revisao.txt" "2,3,4;7,10,19;17;25,27;29,30,31,32,49;40;38;55,56;64" "11 13 18 46 47 48"
+revisao "$D/k8s/revisao.txt" "2,3,4;7,10,19;17;25,27;29,30,31,32,49;40;38;55,56;64" "8 11 13 16 18 23 36 44 46 47 48 53 60 65"
 
 secao k8s-montagem "Kubernetes · Montagem"
 check 1   "cluster prova com 3 nós Ready"         '[ "$(k get nodes --no-headers | grep -cw Ready)" -eq 3 ]'
@@ -289,7 +289,11 @@ rm -rf "$T/.terraform" "$T/.terraform.lock.hcl" 2>/dev/null
 # ============================================================ DESCONTOS
 printf '\n■ Descontos\n'
 desconto() { PENAL=$(soma "$PENAL" "$1"); printf '  ✘ %-4s %s\n' "$1" "$2"; }
-cat "$HC/.bash_history" /root/.bash_history 2>/dev/null | grep -Eq 'chmod[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*(0?777|a\+rwx|ugo\+rwx)' && desconto -5 "chmod 777 no histórico de comandos"
+# Remove trechos entre aspas e exige chmod em posição de comando: texto da revisão digitado
+# no terminal (echo '9 | chmod 777 ...', grep 'chmod 777') não pode gerar desconto.
+cat "$HC/.bash_history" /root/.bash_history 2>/dev/null | sed -E "s/'[^']*'//g; s/\"[^\"]*\"//g" \
+  | grep -Eq '(^|;|&&|\|\||sudo|xargs|-exec)[[:space:]]*chmod[[:space:]]+(-[a-zA-Z]+[[:space:]]+)*(0?777|a\+rwx|ugo\+rwx)' \
+  && desconto -5 "chmod 777 no histórico de comandos"
 { tem_latest "$D/k8s/manifestos" || tem_latest "$G"; } && desconto -3 "imagem :latest (ou sem tag) nos manifestos"
 { tem_secret "$D/k8s/manifestos" || tem_secret "$G"; } && desconto -5 "Secret com senha em arquivo"
 [ "$PENAL" = 0 ] && echo "  nenhum"

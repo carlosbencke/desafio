@@ -4,10 +4,35 @@
 
 Este documento tem **tudo** o que você precisa fazer. No final, o avaliador roda um script no seu WSL que confere cada item e calcula a nota. **Siga os nomes, caminhos, portas e valores exatamente como estão escritos.** O script procura por eles.
 
+## Setup do ambiente (faça antes de tudo)
+
+O desafio troca hostname, SSH e `/etc/fstab` e cria usuários. Por isso ele roda numa distro WSL **nova e dedicada**, nunca na que você usa no dia a dia.
+
+1. No **PowerShell do Windows**, crie a distro (o `--name` exige WSL 2.4.4 ou mais novo; confira com `wsl --version` e, se precisar, rode `wsl --update`):
+
+   ```powershell
+   wsl --install Ubuntu-24.04 --name desafio
+   ```
+
+   Na primeira abertura, crie o seu usuário e a sua senha do Linux.
+
+2. No **Docker Desktop**: *Settings > Resources > WSL integration*, ligue a distro **`desafio`** e clique em *Apply & restart*.
+
+3. Entre na distro e confira o ambiente:
+
+   ```bash
+   wsl -d desafio                      # no PowerShell
+   systemctl is-system-running         # running (ou degraded)
+   docker ps                           # lista sem erro
+   kubectl version --client            # vem junto com o Docker Desktop
+   ```
+
+4. **Daqui em diante, todo comando do desafio roda dentro da distro `desafio`.** Depois da correção, siga a seção **LIMPEZA**, no fim deste documento.
+
 ## Regras
 
 1. **Consulta permitida:** os PDFs de nivelamento (Linux e Kubernetes), `man`, `--help` e `kubectl explain`. **Proibido:** IA, fóruns e busca de soluções. A internet só pode ser usada para instalar pacotes e baixar ferramentas e imagens.
-2. **Todos os comandos** rodam no terminal do **WSL (Ubuntu)**, inclusive `docker` e `kubectl`.
+2. **Todos os comandos** rodam no terminal da distro WSL **`desafio`** (Ubuntu 24.04), inclusive `docker` e `kubectl`.
 3. **Não existe script pronto.** Você monta tudo com os comandos que estudou. Este documento diz **o que** precisa existir, não **como** fazer.
 4. **Não use atalhos perigosos.** `chmod 777`, imagens `:latest` e Secret com senha em arquivo **descontam pontos**.
 5. Tudo o que você entrega fica em **`~/desafio/`**, com esta estrutura:
@@ -154,7 +179,7 @@ Com a montagem concluída, **execute as simulações abaixo**. Cada uma quebra a
 **Incidente L1, disco cheio:**
 
 ```bash
-sudo systemd-run --unit=nf-arquivo-sync bash -c "exec 3>/srv/nfdata/arquivo/.sync.tmp; head -c 185M /dev/zero >&3; rm -f /srv/nfdata/arquivo/.sync.tmp; exec sleep infinity"
+sudo systemd-run --unit=nf-arquivo-sync bash -c "exec 3>/srv/nfdata/arquivo/.sync.tmp; head -c 140M /dev/zero >&3; rm -f /srv/nfdata/arquivo/.sync.tmp; exec sleep infinity"
 ```
 
 > O volume `/srv/nfdata/arquivo` ficou quase 100% cheio, mas ninguém acha o arquivo culpado. **Libere o espaço** e mantenha o volume montado.
@@ -165,7 +190,7 @@ sudo systemd-run --unit=nf-arquivo-sync bash -c "exec 3>/srv/nfdata/arquivo/.syn
 sudo chmod 666 /home/operador/.ssh/authorized_keys
 ```
 
-> O `ssh nfnode` passou a pedir senha. **Restaure o acesso por chave.**
+> O `ssh nfnode` passou a ser recusado (`Permission denied (publickey)`). **Restaure o acesso por chave.**
 
 **Incidente L3, importador parado:**
 
@@ -471,3 +496,36 @@ docker run --rm -v "$PWD":/w -w /w hashicorp/terraform:1.9.8 validate
 | **Total** | **100** |
 | Bônus Terraform | +10 |
 | Descontos: `chmod 777` (−5), `:latest` (−3), Secret com senha em arquivo (−5) | até −13 |
+
+---
+
+# LIMPEZA (depois da correção)
+
+Só faça isto **depois** que o avaliador rodar o `avaliar.sh`. A limpeza apaga tudo o que o desafio criou. A ordem importa: o cluster k3d roda dentro do **Docker Desktop**, não na distro, e **não some** com o `wsl --unregister`.
+
+1. **Dentro da distro `desafio`**, guarde o que quiser manter e apague o cluster e as imagens:
+
+   ```bash
+   cp -r ~/desafio /mnt/c/Users/<seu-usuario-windows>/desafio-backup   # opcional
+   k3d cluster delete prova
+   docker image rm emissor:1.0 hashicorp/terraform:1.9.8
+   docker image ls --format '{{.Repository}}:{{.Tag}}' | grep -E 'rancher/k3s|k3d-io/k3d-(proxy|tools)' | xargs -r docker image rm
+   ```
+
+2. **No PowerShell do Windows**, apague a distro (isso remove usuários, disco loop, fstab e serviços junto com ela):
+
+   ```powershell
+   wsl --terminate desafio
+   wsl --unregister desafio
+   ```
+
+3. **No Docker Desktop**: em *Settings > Resources > WSL integration*, se a distro `desafio` ainda aparecer, desligue-a e clique em *Apply & restart*.
+
+4. **Confira** que não sobrou nada:
+
+   ```powershell
+   wsl -l -v                                         # 'desafio' não aparece
+   docker ps -a --filter name=k3d-prova              # nenhum container
+   docker network ls --filter name=k3d-prova         # nenhuma rede
+   docker volume ls --filter name=k3d-prova          # nenhum volume
+   ```

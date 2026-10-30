@@ -14,7 +14,7 @@
 1. Entregue o `DESAFIO.md` ao avaliado.
 2. **Pré-requisitos da máquina:** WSL com Ubuntu e Docker Desktop com integração WSL habilitada.
 3. O avaliado segue o documento até a seção **ENTREGA**. Sugestão: Parte 1 num dia, Partes 2 e 3 em outro.
-4. No fim, com o ambiente dele ainda no ar, copie o `avaliar.sh` para o WSL dele e rode:
+4. No fim, com o ambiente dele ainda no ar, copie o `avaliar.sh` para a distro `desafio` dele (`wsl -d desafio`) e rode:
 
    ```bash
    sudo bash avaliar.sh
@@ -60,7 +60,7 @@
 | 18 | Serviço rodando como root |
 | 16/17/20/22 | Unit sem `[Install]` e `start` sem `enable` |
 
-Linhas neutras (não descontam): 4, 6, 8, 19 e 21.
+Linhas neutras (não descontam): 1, 4, 6, 8, 19 e 21.
 
 **Kubernetes** (9 problemas):
 
@@ -76,7 +76,7 @@ Linhas neutras (não descontam): 4, 6, 8, 19 e 21.
 | 55/56 | PDB igual ao número de réplicas trava o drain |
 | 64 | `restartPolicy: Always` em Job |
 
-Linhas neutras: 11, 13, 18, 46, 47 e 48.
+Linhas neutras: 8, 11, 13, 16, 18, 23, 36, 44, 46, 47, 48, 53, 60 e 65.
 
 ## Gabarito dos incidentes
 
