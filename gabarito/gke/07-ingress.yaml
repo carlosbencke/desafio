@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: entrada
+  namespace: notafacil
+spec:
+  ingressClassName: gce
+  rules:
+  - host: notafacil.exemplo.com.br
+    http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend: { service: { name: emissor, port: { number: 80 } } }
+      - path: /
+        pathType: Prefix
+        backend: { service: { name: portal, port: { number: 80 } } }

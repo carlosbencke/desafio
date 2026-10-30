@@ -1,0 +1,22 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: carga-inicial
+  namespace: notafacil
+spec:
+  backoffLimit: 6
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+      - name: carga
+        image: mongo:7.0
+        envFrom: [{ secretRef: { name: mongo-cred } }]
+        command:
+        - sh
+        - -c
+        - |
+          mongosh --host mongo-0.mongo \
+            -u "$MONGO_INITDB_ROOT_USERNAME" -p "$MONGO_INITDB_ROOT_PASSWORD" \
+            --authenticationDatabase admin \
+            --eval 'db.getSiblingDB("fiscal").notas.insertOne({chave: "NFE-0001", status: "autorizada"})'

@@ -1,0 +1,39 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: limpeza
+  namespace: notafacil
+spec:
+  schedule: "*/2 * * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+          - name: limpeza
+            image: busybox:1.36
+            command: ["sh", "-c", "date; echo limpeza ok"]
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: agente-nf
+  namespace: notafacil
+spec:
+  selector: { matchLabels: { app: agente-nf } }
+  template:
+    metadata: { labels: { app: agente-nf } }
+    spec:
+      containers:
+      - name: agente
+        image: busybox:1.36
+        command: ["sh", "-c", "while true; do echo coletando no no $NODE; sleep 30; done"]
+        env:
+        - name: NODE
+          valueFrom: { fieldRef: { fieldPath: spec.nodeName } }
+        resources:
+          requests: { cpu: 10m, memory: 16Mi }
+          limits: { cpu: 50m, memory: 32Mi }

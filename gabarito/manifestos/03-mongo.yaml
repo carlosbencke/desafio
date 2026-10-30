@@ -1,0 +1,38 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mongo
+  namespace: notafacil
+spec:
+  clusterIP: None
+  selector: { app: mongo }
+  ports: [{ port: 27017 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mongo
+  namespace: notafacil
+spec:
+  serviceName: mongo
+  replicas: 1
+  selector: { matchLabels: { app: mongo } }
+  template:
+    metadata: { labels: { app: mongo } }
+    spec:
+      containers:
+      - name: mongo
+        image: mongo:7.0
+        envFrom: [{ secretRef: { name: mongo-cred } }]
+        ports: [{ containerPort: 27017 }]
+        resources:
+          requests: { cpu: 100m, memory: 256Mi }
+          limits: { cpu: 500m, memory: 1Gi }
+        readinessProbe:
+          tcpSocket: { port: 27017 }
+        volumeMounts: [{ name: dados, mountPath: /data/db }]
+  volumeClaimTemplates:
+  - metadata: { name: dados }
+    spec:
+      accessModes: [ReadWriteOnce]
+      resources: { requests: { storage: 1Gi } }
